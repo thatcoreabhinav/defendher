@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const Alert = require('../models/alert');
+const Alert = require('../models/Alert');
 
 // SOS trigger
 router.post('/', async (req, res) => {
