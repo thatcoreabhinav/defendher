@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safe Route</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
+    #bar { padding: 10px; text-align: center; }
+    input { padding: 10px; width: 50%; font-size: 16px; }
+    button { padding: 10px 14px; font-size: 16px; }
+    #msg { padding: 10px; text-align: center; font-weight: bold; }
+    #map { height: 70vh; }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <input id="dest" placeholder="Destination e.g. India Gate, Delhi">
+    <button id="go">Start</button>
+    <button id="sim">Simulate wrong turn</button>
+  </div>
+  <div id="msg"></div>
+  <div id="map"></div>
+
+  <script>
+    const map = L.map('map').setView([28.6, 77.2], 13);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    const msg = document.getElementById('msg');
+    let routePts = [], routeLine, me, lastPos;
+
+    // distance (metres) from point p to the line segment a-b
+    function distToSeg(p, a, b) {
+      const k = Math.cos(p.lat * Math.PI / 180);
+      const X = o => ({ x: o.lng * 111320 * k, y: o.lat * 110540 });
+      const P = X(p), A = X(a), B = X(b);
+      const dx = B.x - A.x, dy = B.y - A.y;
+      const t = (dx || dy)
+        ? Math.max(0, Math.min(1, ((P.x - A.x) * dx + (P.y - A.y) * dy) / (dx * dx + dy * dy)))
+        : 0;
+      return Math.hypot(P.x - (A.x + t * dx), P.y - (A.y + t * dy));
+    }
+
+    function offRouteDist(p) {
+      let min = Infinity;
+      for (let i = 0; i < routePts.length - 1; i++)
+        min = Math.min(min, distToSeg(p, routePts[i], routePts[i + 1]));
+      return min;
+    }
+
+    function check(p) {
+      if (!routePts.length) return;
+      const d = offRouteDist(p);
+      if (d > 300) {
+        msg.style.background = '#c62828';
+        msg.textContent = `⚠️ Off route by ${Math.round(d)} m. This path may be unsafe!`;
+        if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+      } else {
+        msg.style.background = '#2e7d32';
+        msg.textContent = '✅ On the safe route';
+      }
+    }
+
+    function update(p) {
+      if (me) me.setLatLng([p.lat, p.lng]); else me = L.marker([p.lat, p.lng]).addTo(map);
+      lastPos = p;
+      check(p);
+    }
+
+    document.getElementById('go').onclick = () => {
+      const q = document.getElementById('dest').value.trim();
+      if (!q) return;
+      msg.textContent = 'Finding route...';
+
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const s = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+
+        // 1. destination name -> coordinates (free OpenStreetMap geocoder)
+        const g = await (await fetch(
+          'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q)
+        )).json();
+        if (!g.length) { msg.textContent = 'Destination not found'; return; }
+        const e = { lat: +g[0].lat, lng: +g[0].lon };
+
+        // 2. planned route (free OSRM)
+        const r = await (await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${s.lng},${s.lat};${e.lng},${e.lat}?overview=full&geometries=geojson`
+        )).json();
+        routePts = r.routes[0].geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
+
+        if (routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(routePts.map(p => [p.lat, p.lng]), { color: 'blue' }).addTo(map);
+        map.fitBounds(routeLine.getBounds());
+
+        update(s);
+        // 3. watch the user's movement
+        navigator.geolocation.watchPosition(p =>
+          update({ lat: p.coords.latitude, lng: p.coords.longitude }));
+      }, () => alert('Please allow location access'));
+    };
+
+    // for the demo: fake a wrong turn about 1 km away
+    document.getElementById('sim').onclick = () => {
+      if (!lastPos) return;
+      update({ lat: lastPos.lat + 0.01, lng: lastPos.lng + 0.01 });
+    };
+  </script>
+</body>
+</html>

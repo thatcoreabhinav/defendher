@@ -28,6 +28,7 @@ document.getElementById('sos').onclick = () => {
       `🚨 SOS active. Share this link with your contacts:<br><a href="${link}" target="_blank">${link}</a>`;
 
     startRecording();
+    notifyPolice(location);
   }, () => alert('Please allow location access'));
 };
 
@@ -73,6 +74,61 @@ document.getElementById('erase').onclick = () => {
   document.getElementById('rec-actions').style.display = 'none';
   alert('Recording erased');
 };
+
+// ---------- Nearest police station ----------
+function distKm(a, b) {
+  const R = 6371, rad = x => x * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+const OVERPASS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter'
+];
+
+async function notifyPolice(loc) {
+  const box = document.getElementById('police');
+  box.textContent = 'Locating nearest police station...';
+
+  const q = `[out:json][timeout:25];nwr["amenity"="police"](around:5000,${loc.lat},${loc.lng});out center 20;`;
+  let data = null;
+
+  for (const url of OVERPASS) {
+    try {
+      const res = await fetch(url + '?data=' + encodeURIComponent(q));
+      if (!res.ok) { console.log('Overpass', url, res.status); continue; }
+      data = await res.json();
+      break;
+    } catch (e) {
+      console.log('Overpass failed', url, e);
+    }
+  }
+
+  if (!data) {
+    box.textContent = '🚔 Could not locate a station. Please call 112.';
+    return;
+  }
+
+  const stations = data.elements
+    .map(e => ({
+      name: (e.tags && e.tags.name) || 'Police Station',
+      lat: e.lat ?? (e.center && e.center.lat),
+      lng: e.lon ?? (e.center && e.center.lon)
+    }))
+    .filter(s => s.lat !== undefined)
+    .map(s => ({ ...s, km: distKm(loc, s) }))
+    .sort((a, b) => a.km - b.km);
+
+  if (!stations.length) {
+    box.textContent = '🚔 No police station found within 5 km. Please call 112.';
+    return;
+  }
+  const s = stations[0];
+  box.innerHTML = `🚔 Alert sent to <b>${s.name}</b> (${s.km.toFixed(1)} km away)`;
+}
 
 // ---------- Vehicle check ----------
 document.getElementById('check').onclick = async () => {
