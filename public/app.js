@@ -4,7 +4,7 @@ let recorder, chunks = [];
 const send = (url, method, body) =>
   fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-//SOS thing
+// ---------- SOS ----------
 document.getElementById('sos').onclick = () => {
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -16,7 +16,6 @@ document.getElementById('sos').onclick = () => {
     });
     alertId = (await res.json()).id;
 
-    //keep sending location as the user moves
     navigator.geolocation.watchPosition((p) => {
       send(`/api/alerts/${alertId}/location`, 'PATCH', {
         lat: p.coords.latitude,
@@ -32,6 +31,7 @@ document.getElementById('sos').onclick = () => {
   }, () => alert('Please allow location access'));
 };
 
+// ---------- Recording ----------
 async function startRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -70,4 +70,23 @@ document.getElementById('send').onclick = async () => {
 
 document.getElementById('erase').onclick = () => {
   chunks = [];
-}
+  document.getElementById('rec-actions').style.display = 'none';
+  alert('Recording erased');
+};
+
+// ---------- Vehicle check ----------
+document.getElementById('check').onclick = async () => {
+  const num = document.getElementById('vnum').value.trim();
+  if (!num) return;
+  const out = document.getElementById('vresult');
+  const res = await fetch('/api/vehicles/' + encodeURIComponent(num));
+
+  if (res.ok) {
+    const v = await res.json();
+    out.innerHTML = `<div style="background:#2e7d32; padding:15px; border-radius:10px; display:inline-block;">
+      ✅ Registered ${v.type}<br>Driver: ${v.driverName}<br>Phone: ${v.phone}<br>License: ${v.licenseNo}</div>`;
+  } else {
+    out.innerHTML = `<div style="background:#c62828; padding:15px; border-radius:10px; display:inline-block;">
+      ⚠️ Unregistered vehicle. Avoid it and be careful.</div>`;
+  }
+};
