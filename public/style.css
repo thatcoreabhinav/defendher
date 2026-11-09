@@ -122,4 +122,15 @@ input:focus-visible { border-color: var(--focus); }
 #clist { margin-top: 14px; }
 #clist p { color: var(--muted); margin: 0; }
 #clist div { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); margin: 0 !important; }
-#clist button { background: none; border: 0; font-size:
+#clist button { background: none; border: 0; font-size: 18px; cursor: pointer; color: var(--muted); }
+#clist button:hover { color: var(--sos); }
+#vresult { margin-top: 16px; line-height: 1.6; }
+
+/* route banner */
+.route { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 20px; padding: 24px; background: var(--ink); color: #fff; border-radius: 6px; }
+.route p { margin: 4px 0 0; color: #B8C6D0; }
+.route .btn { border-color: #fff; color: #fff; }
+.route .btn:hover { background: #fff; color: var(--ink); }
+
+footer { max-width: 1040px; margin: 0 auto; padding: 24px 20px 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; display: flex; gap: 16px; flex-wrap: wrap; align-items: baseline; }
+footer strong { font-family: var(--display); font-size: 20px; color: var(--ink); }
