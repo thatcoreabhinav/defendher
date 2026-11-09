@@ -6,25 +6,54 @@
   <title>Live Tracking</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <style> body { margin: 0; } #map { height: 100vh; } </style>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #banner { padding: 12px; text-align: center; font-weight: bold; color: white; background: #555; }
+    #map { height: calc(100vh - 44px); }
+  </style>
 </head>
 <body>
+  <div id="banner">Loading...</div>
   <div id="map"></div>
+
   <script>
     const id = new URLSearchParams(location.search).get('id');
     const map = L.map('map').setView([28.6, 77.2], 16);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let marker;
+    const banner = document.getElementById('banner');
+    let marker, first = true;
     const line = L.polyline([], { color: 'red' }).addTo(map);
+
+    function ago(ms) {
+      const s = Math.round(ms / 1000);
+      if (s < 60) return s + ' sec ago';
+      const m = Math.round(s / 60);
+      if (m < 60) return m + ' min ago';
+      return Math.round(m / 60) + ' hr ago';
+    }
 
     async function refresh() {
       const a = await (await fetch('/api/alerts/' + id)).json();
       const { lat, lng, at } = a.lastLocation;
+      const age = Date.now() - new Date(at).getTime();
+
       if (!marker) marker = L.marker([lat, lng]).addTo(map);
-      marker.setLatLng([lat, lng]).bindPopup('Last seen: ' + new Date(at).toLocaleTimeString());
+      marker.setLatLng([lat, lng]);
       line.setLatLngs(a.path.map(p => [p.lat, p.lng]));
-      map.setView([lat, lng]);
+      if (first) { map.setView([lat, lng], 16); first = false; }
+
+      if (!a.active) {
+        banner.style.background = '#555';
+        banner.textContent = `SOS ended. Last seen ${ago(age)}`;
+      } else if (age < 30000) {
+        banner.style.background = '#c62828';
+        banner.textContent = '🔴 LIVE: location updating';
+      } else {
+        banner.style.background = '#e65100';
+        banner.textContent = `⚠️ No signal. Last seen ${ago(age)} at this location`;
+      }
+      marker.bindPopup('Last seen: ' + new Date(at).toLocaleTimeString());
     }
 
     refresh();
