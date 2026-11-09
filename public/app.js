@@ -27,6 +27,15 @@ document.getElementById('sos').onclick = () => {
     document.getElementById('status').innerHTML =
       `🚨 SOS active. Share this link with your contacts:<br><a href="${link}" target="_blank">${link}</a>`;
 
+    // WhatsApp buttons for each saved contact
+    const text = encodeURIComponent(`🚨 SOS! I need help. Track my live location: ${link}`);
+    const contacts = getContacts();
+    document.getElementById('status').innerHTML += contacts.length
+      ? '<br><br>' + contacts.map(c =>
+          `<a href="https://wa.me/91${c.phone}?text=${text}" target="_blank">💬 WhatsApp ${c.name}</a>`
+        ).join('<br>')
+      : '<br><br>No emergency contacts saved. Add one below.';
+
     startRecording();
     notifyPolice(location);
   }, () => alert('Please allow location access'));
