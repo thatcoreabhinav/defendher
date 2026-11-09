@@ -32,11 +32,19 @@
   </div>
 
   <hr style="margin:40px 0; border-color:#444;">
+  <h2>Emergency Contacts</h2>
+  <input id="cname" placeholder="Name" style="padding:10px; font-size:16px;">
+  <input id="cphone" placeholder="10-digit phone" maxlength="10" style="padding:10px; font-size:16px;">
+  <button id="addc" style="padding:10px 20px; font-size:16px;">Add</button>
+  <div id="clist" style="margin-top:15px;"></div>
+
+  <hr style="margin:40px 0; border-color:#444;">
   <h2>Check Your Vehicle</h2>
   <input id="vnum" placeholder="e.g. DL1CAB1234" style="padding:10px; font-size:16px;">
   <button id="check" style="padding:10px 20px; font-size:16px;">Verify</button>
   <div id="vresult" style="margin-top:20px; font-size:18px;"></div>
 
+  <script src="contacts.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

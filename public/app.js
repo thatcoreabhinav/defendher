@@ -11,7 +11,7 @@ document.getElementById('sos').onclick = () => {
 
     const res = await send('/api/alerts', 'POST', {
       userName: 'Demo User',
-      contacts: ['9999999999'],
+      contacts: getContacts(),
       location
     });
     alertId = (await res.json()).id;
