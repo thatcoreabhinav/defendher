@@ -28,7 +28,7 @@ document.getElementById('sos').onclick = () => {
       `🚨 SOS active. Share this link with your contacts:<br><a href="${link}" target="_blank">${link}</a>`;
 
     // WhatsApp buttons for each saved contact
-    const text = encodeURIComponent(`🚨 SOS! I need help. Track my live location: ${link}`);
+    const text = encodeURIComponent(`🚨 SOS! I need help. Track my live location:\n${link}`);
     const contacts = getContacts();
     document.getElementById('status').innerHTML += contacts.length
       ? '<br><br>' + contacts.map(c =>

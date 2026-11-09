@@ -1,48 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F2F5F4">
   <title>DEFENDher</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #1a1a2e; color: white; padding: 40px 20px; }
-    #sos { width: 200px; height: 200px; border-radius: 50%; border: none; background: red; color: white;
-           font-size: 40px; font-weight: bold; cursor: pointer; box-shadow: 0 0 30px red; }
-    #sos:active { transform: scale(0.95); }
-    #status { margin-top: 30px; font-size: 18px; }
-    a { color: #4fc3f7; }
-  </style>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z' fill='%23D62839'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>DEFENDher</h1>
-  <p>Press SOS in an emergency</p>
-  <p><a href="route.html">🗺️ Safe route guide</a></p>
-  <button id="sos">SOS</button>
-  <div id="status"></div>
-  <div id="police" style="margin-top:15px; font-size:18px;"></div>
-  <a href="tel:112" style="display:inline-block; margin-top:15px; padding:12px 24px; background:#c62828; color:white; border-radius:8px; text-decoration:none; font-size:18px;">📞 Call 112</a>
+  <header class="top-wrap">
+    <div class="top">
+      <span class="brand">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z" fill="#D62839"/>
+          <path d="M8.5 12.5l2.4 2.4 4.6-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        DEFENDher
+      </span>
+      <nav>
+        <a href="route.html">Safe route</a>
+        <a href="#contacts">Contacts</a>
+        <a href="#vehicle">Vehicle check</a>
+      </nav>
+    </div>
+  </header>
 
-  <video id="preview" autoplay muted playsinline
-    style="display:none; width:90%; max-width:400px; margin-top:20px; border:4px solid red; border-radius:10px;"></video>
-  <p id="rec-label" style="display:none; color:red; font-weight:bold;">● RECORDING</p>
-  <button id="stop" style="display:none; margin-top:10px; padding:10px 20px;">Stop recording</button>
-  <div id="rec-actions" style="display:none; margin-top:15px;">
-    <button id="send" style="padding:10px 20px; background:#2e7d32; color:white; border:none;">Send to authorities</button>
-    <button id="erase" style="padding:10px 20px; background:#555; color:white; border:none;">Erase</button>
-  </div>
+  <main>
+    <section class="hero">
+      <div>
+        <h1>Press once. Let them see where you are.</h1>
+        <p>Built for women travelling by cab, bus and auto, where help is often slow or never arrives.</p>
+      </div>
+      <div class="sos-wrap">
+        <button id="sos" aria-label="Send SOS">SOS</button>
+      </div>
+    </section>
 
-  <hr style="margin:40px 0; border-color:#444;">
-  <h2>Emergency Contacts</h2>
-  <input id="cname" placeholder="Name" style="padding:10px; font-size:16px;">
-  <input id="cphone" placeholder="10-digit phone" maxlength="10" style="padding:10px; font-size:16px;">
-  <button id="addc" style="padding:10px 20px; font-size:16px;">Add</button>
-  <div id="clist" style="margin-top:15px;"></div>
+    <section class="does">
+      <h2>What one press does</h2>
+      <ul>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <div><strong>Shares your live location</strong><span>A tracking link updates as you move. Send it to your contacts on WhatsApp.</span></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg>
+          <div><strong>Starts recording</strong><span>Video and audio record on the spot. You decide whether to send it or erase it.</span></div>
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/></svg>
+          <div><strong>Finds the nearest police station</strong><span>Shows the closest station and how far away it is.</span></div>
+        </li>
+      </ul>
+    </section>
 
-  <hr style="margin:40px 0; border-color:#444;">
-  <h2>Check Your Vehicle</h2>
-  <input id="vnum" placeholder="e.g. DL1CAB1234" style="padding:10px; font-size:16px;">
-  <button id="check" style="padding:10px 20px; font-size:16px;">Verify</button>
-  <div id="vresult" style="margin-top:20px; font-size:18px;"></div>
+    <section class="live" aria-live="polite">
+      <h2>Live alert</h2>
+      <div id="status"></div>
+      <p class="idle">Nothing active. After you press SOS, your tracking link, WhatsApp buttons and the nearest police station appear here.</p>
+      <div id="police"></div>
+
+      <video id="preview" autoplay muted playsinline></video>
+      <p id="rec-label">● Recording</p>
+      <button id="stop" class="btn">Stop recording</button>
+      <div id="rec-actions">
+        <button id="send" class="btn btn-safe">Send to authorities</button>
+        <button id="erase" class="btn">Erase</button>
+      </div>
+
+      <a class="btn btn-sos call" href="tel:112">Call 112</a>
+    </section>
+
+    <div class="tools">
+      <section class="tool" id="contacts">
+        <h2>Emergency contacts</h2>
+        <p>Up to 3 people who get your tracking link when you press SOS.</p>
+        <div class="field">
+          <div><label for="cname">Name</label><input id="cname" placeholder="e.g. Mom"></div>
+          <div><label for="cphone">Phone</label><input id="cphone" placeholder="10 digits" maxlength="10" inputmode="numeric"></div>
+        </div>
+        <button id="addc" class="btn">Add contact</button>
+        <div id="clist"></div>
+      </section>
+
+      <section class="tool" id="vehicle">
+        <h2>Check your vehicle</h2>
+        <p>Enter the number plate before you get in. Registered vehicles show the driver's details.</p>
+        <div class="field">
+          <div><label for="vnum">Vehicle number</label><input id="vnum" placeholder="e.g. DL1CAB1234"></div>
+        </div>
+        <button id="check" class="btn">Verify</button>
+        <div id="vresult"></div>
+      </section>
+    </div>
+
+    <section class="route">
+      <div>
+        <h2>Travelling somewhere?</h2>
+        <p>Pick a destination and get warned if you drift off the planned route.</p>
+      </div>
+      <a class="btn" href="route.html">Open safe route guide</a>
+    </section>
+  </main>
+
+  <footer>
+    <strong>DEFENDher</strong>
+    <span>Demo project. The police alert is simulated. In a real emergency, call 112.</span>
+  </footer>
 
   <script src="contacts.js"></script>
   <script src="app.js"></script>
