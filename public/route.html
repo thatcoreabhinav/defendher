@@ -1,110 +1,225 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Safe Route</title>
+  <title>Safe route · DEFENDher</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z' fill='%23D62839'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="style.css">
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #1a1a2e; color: white; }
-    #bar { padding: 10px; text-align: center; }
-    input { padding: 10px; width: 50%; font-size: 16px; }
-    button { padding: 10px 14px; font-size: 16px; }
-    #msg { padding: 10px; text-align: center; font-weight: bold; }
-    #map { height: 70vh; }
+    .planner { display: grid; }
+    .panel { background: var(--panel); padding: 22px; border-bottom: 1px solid var(--line); }
+    .panel h1 { font-family: var(--display); font-size: 36px; line-height: 1; margin: 0 0 18px; }
+    #map { height: 60vh; }
+    @media (min-width: 820px) {
+      .planner { grid-template-columns: 390px 1fr; height: calc(100vh - 62px); }
+      .panel { overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--line); }
+      #map { height: 100%; }
+    }
+
+    /* the two fields, joined like Google Maps */
+    .fields { display: grid; grid-template-columns: 24px 1fr 40px; gap: 10px; }
+    .dots { position: relative; height: 98px; }
+    .dot { position: absolute; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; }
+    .dot.a { top: 15px; background: #fff; border: 3px solid var(--ink); }
+    .dot.b { bottom: 15px; background: var(--sos); }
+    .dots .line { position: absolute; left: 50%; top: 34px; bottom: 34px; border-left: 3px dotted var(--muted); transform: translateX(-50%); }
+    .inputs { display: grid; gap: 10px; }
+    .inputs input { height: 44px; padding: 0 12px; }
+    #swap { align-self: center; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--line); background: #fff; font-size: 18px; cursor: pointer; color: var(--ink); }
+    #swap:hover { background: var(--ink); color: #fff; }
+
+    .panel .btn { width: 100%; margin-top: 10px; }
+    #msg { display: none; margin-top: 14px; padding: 10px 12px; border-radius: 6px; font-weight: 600; }
+    #msg.info { display: block; background: #E8EEF2; color: var(--ink); }
+    #msg.ok { display: block; background: var(--safe); color: #fff; }
+    #msg.bad { display: block; background: var(--sos); color: #fff; }
+    #summary { margin-top: 14px; font-size: 18px; }
+    #summary:empty { display: none; }
+    .note { color: var(--muted); font-size: 14px; margin: 14px 0 0; }
   </style>
 </head>
 <body>
-  <div id="bar">
-    <input id="dest" placeholder="Destination e.g. India Gate, Delhi">
-    <button id="go">Start</button>
-    <button id="sim">Simulate wrong turn</button>
+  <header class="top-wrap">
+    <div class="top">
+      <a class="brand" href="/" style="text-decoration:none;color:inherit">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z" fill="#D62839"/>
+          <path d="M8.5 12.5l2.4 2.4 4.6-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        DEFENDher
+      </a>
+      <nav><a href="/">Home</a></nav>
+    </div>
+  </header>
+
+  <div class="planner">
+    <aside class="panel">
+      <h1>Safe route</h1>
+
+      <div class="fields">
+        <div class="dots"><span class="dot a"></span><span class="line"></span><span class="dot b"></span></div>
+        <div class="inputs">
+          <input id="from" placeholder="Starting point" aria-label="Starting point">
+          <input id="to" placeholder="Destination" aria-label="Destination">
+        </div>
+        <button id="swap" aria-label="Swap start and destination">⇅</button>
+      </div>
+
+      <button id="loc" class="btn">📍 Use my current location</button>
+      <button id="go" class="btn btn-sos">Start route</button>
+
+      <div id="msg" role="status"></div>
+      <div id="summary"></div>
+
+      <button id="sim" class="btn">Simulate wrong turn</button>
+      <p class="note">Off-route alerts follow your live GPS, so start from "My location" to use them. The simulate button fakes a wrong turn for demos.</p>
+    </aside>
+
+    <div id="map"></div>
   </div>
-  <div id="msg"></div>
-  <div id="map"></div>
 
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([28.6, 77.2], 13);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    const msg = document.getElementById('msg');
-    let routePts = [], routeLine, me, lastPos;
+    const $ = (id) => document.getElementById(id);
+    const map = L.map('map').setView([28.6139, 77.2090], 12);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
 
-    // distance (metres) from point p to the line segment a-b
+    let myCoords = null, routePts = [], routeLine, startMark, endMark, me, lastPos, watchId = null;
+
+    function setMsg(text, kind) { $('msg').className = kind; $('msg').textContent = text; }
+
+    // ---------- my location ----------
+    const getPos = () => new Promise((ok, err) =>
+      navigator.geolocation.getCurrentPosition(ok, err, { enableHighAccuracy: true, timeout: 15000 }));
+
+    function showMe(p) {
+      if (me) me.setLatLng([p.lat, p.lng]); else me = L.marker([p.lat, p.lng]).addTo(map);
+    }
+
+    async function useMyLocation(quiet) {
+      if (!quiet) setMsg('Finding your location...', 'info');
+      try {
+        const pos = await getPos();
+        myCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        $('from').value = 'My location';
+        map.setView([myCoords.lat, myCoords.lng], 15);
+        showMe(myCoords);
+        setMsg('Location found.', 'ok');
+      } catch (e) {
+        setMsg('Could not get your location. Allow location access, or type a starting point.', quiet ? 'info' : 'bad');
+      }
+    }
+    $('loc').onclick = () => useMyLocation(false);
+
+    // ---------- swap ----------
+    $('swap').onclick = () => {
+      const t = $('from').value;
+      $('from').value = $('to').value;
+      $('to').value = t;
+    };
+
+    // ---------- geocoding ----------
+    async function resolve(text) {
+      if (text.toLowerCase() === 'my location') {
+        if (!myCoords) throw new Error('Your location is not available yet. Tap "Use my current location".');
+        return myCoords;
+      }
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&q=' + encodeURIComponent(text));
+      const d = await r.json();
+      if (!d.length) throw new Error('Could not find "' + text + '". Try adding the city name.');
+      return { lat: +d[0].lat, lng: +d[0].lon };
+    }
+
+    // ---------- off-route check ----------
     function distToSeg(p, a, b) {
       const k = Math.cos(p.lat * Math.PI / 180);
       const X = o => ({ x: o.lng * 111320 * k, y: o.lat * 110540 });
       const P = X(p), A = X(a), B = X(b);
       const dx = B.x - A.x, dy = B.y - A.y;
-      const t = (dx || dy)
-        ? Math.max(0, Math.min(1, ((P.x - A.x) * dx + (P.y - A.y) * dy) / (dx * dx + dy * dy)))
-        : 0;
+      const t = (dx || dy) ? Math.max(0, Math.min(1, ((P.x - A.x) * dx + (P.y - A.y) * dy) / (dx * dx + dy * dy))) : 0;
       return Math.hypot(P.x - (A.x + t * dx), P.y - (A.y + t * dy));
     }
-
     function offRouteDist(p) {
       let min = Infinity;
-      for (let i = 0; i < routePts.length - 1; i++)
-        min = Math.min(min, distToSeg(p, routePts[i], routePts[i + 1]));
+      for (let i = 0; i < routePts.length - 1; i++) min = Math.min(min, distToSeg(p, routePts[i], routePts[i + 1]));
       return min;
     }
-
-    function check(p) {
+    function update(p) {
+      lastPos = p;
+      showMe(p);
       if (!routePts.length) return;
       const d = offRouteDist(p);
       if (d > 300) {
-        msg.style.background = '#c62828';
-        msg.textContent = `⚠️ Off route by ${Math.round(d)} m. This path may be unsafe!`;
+        setMsg(`⚠️ Off route by ${Math.round(d)} m. This path may be unsafe!`, 'bad');
         if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
       } else {
-        msg.style.background = '#2e7d32';
-        msg.textContent = '✅ On the safe route';
+        setMsg('✅ On the safe route', 'ok');
       }
     }
-
-    function update(p) {
-      if (me) me.setLatLng([p.lat, p.lng]); else me = L.marker([p.lat, p.lng]).addTo(map);
-      lastPos = p;
-      check(p);
+    function stopWatch() {
+      if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
     }
 
-    document.getElementById('go').onclick = () => {
-      const q = document.getElementById('dest').value.trim();
-      if (!q) return;
-      msg.textContent = 'Finding route...';
+    // ---------- start route ----------
+    $('go').onclick = async () => {
+      const fromText = $('from').value.trim(), toText = $('to').value.trim();
+      if (!fromText) return setMsg('Enter a starting point or use your location.', 'bad');
+      if (!toText) return setMsg('Enter a destination.', 'bad');
 
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const s = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setMsg('Finding route...', 'info');
+      stopWatch();
+      try {
+        const s = await resolve(fromText);
+        const e = await resolve(toText);
 
-        // 1. destination name -> coordinates (free OpenStreetMap geocoder)
-        const g = await (await fetch(
-          'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q)
-        )).json();
-        if (!g.length) { msg.textContent = 'Destination not found'; return; }
-        const e = { lat: +g[0].lat, lng: +g[0].lon };
-
-        // 2. planned route (free OSRM)
         const r = await (await fetch(
           `https://router.project-osrm.org/route/v1/driving/${s.lng},${s.lat};${e.lng},${e.lat}?overview=full&geometries=geojson`
         )).json();
-        routePts = r.routes[0].geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
+        if (!r.routes || !r.routes.length) throw new Error('No route found between these places.');
+
+        const route = r.routes[0];
+        routePts = route.geometry.coordinates.map(c => ({ lat: c[1], lng: c[0] }));
 
         if (routeLine) map.removeLayer(routeLine);
-        routeLine = L.polyline(routePts.map(p => [p.lat, p.lng]), { color: 'blue' }).addTo(map);
-        map.fitBounds(routeLine.getBounds());
+        if (startMark) map.removeLayer(startMark);
+        if (endMark) map.removeLayer(endMark);
+        routeLine = L.polyline(routePts.map(p => [p.lat, p.lng]), { color: '#1B6CA8', weight: 6 }).addTo(map);
+        startMark = L.circleMarker([s.lat, s.lng], { radius: 8, color: '#10212F', fillColor: '#fff', fillOpacity: 1, weight: 3 }).addTo(map);
+        endMark = L.marker([e.lat, e.lng]).addTo(map);
+        map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
 
-        update(s);
-        // 3. watch the user's movement
-        navigator.geolocation.watchPosition(p =>
-          update({ lat: p.coords.latitude, lng: p.coords.longitude }));
-      }, () => alert('Please allow location access'));
+        $('summary').innerHTML = `<strong>${(route.distance / 1000).toFixed(1)} km</strong> · ${Math.round(route.duration / 60)} min by road`;
+
+        if (fromText.toLowerCase() === 'my location') {
+          update(s);
+          watchId = navigator.geolocation.watchPosition(
+            p => update({ lat: p.coords.latitude, lng: p.coords.longitude }),
+            () => setMsg('Lost your GPS signal.', 'bad'),
+            { enableHighAccuracy: true }
+          );
+        } else {
+          setMsg('Route ready. Start from "My location" to get off-route alerts.', 'info');
+        }
+      } catch (err) {
+        setMsg(err.message || 'Something went wrong. Try again.', 'bad');
+      }
     };
 
-    // for the demo: fake a wrong turn about 1 km away
-    document.getElementById('sim').onclick = () => {
-      if (!lastPos) return;
-      update({ lat: lastPos.lat + 0.01, lng: lastPos.lng + 0.01 });
+    // ---------- demo helper ----------
+    $('sim').onclick = () => {
+      if (!routePts.length) return setMsg('Start a route first.', 'info');
+      const base = lastPos || routePts[Math.floor(routePts.length / 2)];
+      update({ lat: base.lat + 0.01, lng: base.lng + 0.01 });
     };
+
+    useMyLocation(true);
   </script>
 </body>
 </html>

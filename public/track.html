@@ -1,63 +1,172 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Live Tracking</title>
+  <title>Live tracking · DEFENDher</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z' fill='%23D62839'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="style.css">
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; }
-    #banner { padding: 12px; text-align: center; font-weight: bold; color: white; background: #555; }
-    #map { height: calc(100vh - 44px); }
+    :root { --warn: #E08A00; }
+    .tracker { display: grid; }
+    .panel { background: var(--panel); padding: 22px; border-bottom: 1px solid var(--line); }
+    .panel h1 { font-family: var(--display); font-size: 36px; line-height: 1; margin: 0 0 4px; }
+    .who { color: var(--muted); margin: 0 0 18px; }
+    #map { height: 58vh; }
+    @media (min-width: 820px) {
+      .tracker { grid-template-columns: 390px 1fr; height: calc(100vh - 62px); }
+      .panel { overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--line); }
+      #map { height: 100%; }
+    }
+
+    /* status card */
+    .st { border: 1px solid var(--line); border-left: 6px solid var(--idle); border-radius: 6px; padding: 14px 16px; }
+    .st.live { border-left-color: var(--sos); }
+    .st.lost { border-left-color: var(--warn); }
+    .st h2 { font-size: 26px; margin: 0; display: flex; align-items: center; gap: 10px; }
+    .st h2::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--idle); }
+    .st.live h2::before { background: var(--sos); }
+    .st.lost h2::before { background: var(--warn); }
+    .st p { margin: 6px 0 0; color: var(--muted); }
+    @media (prefers-reduced-motion: no-preference) {
+      .st.live h2::before { animation: blink 1.2s ease-in-out infinite; }
+      @keyframes blink { 50% { opacity: .3; } }
+    }
+
+    dl { margin: 18px 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; }
+    dt { color: var(--muted); }
+    dd { margin: 0; font-weight: 600; text-align: right; }
+
+    .panel .btn { width: 100%; margin-top: 10px; text-align: center; }
+    .note { color: var(--muted); font-size: 14px; margin: 16px 0 0; }
   </style>
 </head>
 <body>
-  <div id="banner">Loading...</div>
-  <div id="map"></div>
+  <header class="top-wrap">
+    <div class="top">
+      <a class="brand" href="/" style="text-decoration:none;color:inherit">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z" fill="#D62839"/>
+          <path d="M8.5 12.5l2.4 2.4 4.6-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        DEFENDher
+      </a>
+      <nav><a href="/">Home</a></nav>
+    </div>
+  </header>
 
+  <div class="tracker">
+    <aside class="panel">
+      <h1>Live tracking</h1>
+      <p class="who" id="who">Loading...</p>
+
+      <div class="st" id="st" role="status">
+        <h2 id="st-title">Connecting</h2>
+        <p id="st-sub">Fetching the latest location...</p>
+      </div>
+
+      <dl>
+        <dt>Last update</dt><dd id="d-age">-</dd>
+        <dt>Points recorded</dt><dd id="d-pts">-</dd>
+        <dt>Coordinates</dt><dd id="d-xy">-</dd>
+      </dl>
+
+      <a class="btn btn-sos" id="gmaps" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
+      <button class="btn" id="center">Re-center map</button>
+
+      <p class="note">This page refreshes by itself every few seconds. If the status turns to "No signal", the phone may be switched off or out of coverage. The map shows the last place it was seen.</p>
+    </aside>
+
+    <div id="map"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
+    const $ = (id) => document.getElementById(id);
     const id = new URLSearchParams(location.search).get('id');
-    const map = L.map('map').setView([28.6, 77.2], 16);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    const banner = document.getElementById('banner');
-    let marker, first = true;
-    const line = L.polyline([], { color: 'red' }).addTo(map);
+    const map = L.map('map').setView([28.6139, 77.2090], 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+    const line = L.polyline([], { color: '#D62839', weight: 5, opacity: .85 }).addTo(map);
+    let marker, first = true, data = null;
 
     function ago(ms) {
-      const s = Math.round(ms / 1000);
+      const s = Math.max(0, Math.round(ms / 1000));
       if (s < 60) return s + ' sec ago';
       const m = Math.round(s / 60);
       if (m < 60) return m + ' min ago';
-      return Math.round(m / 60) + ' hr ago';
+      const h = Math.floor(m / 60);
+      return h + ' hr ' + (m % 60) + ' min ago';
+    }
+
+    function render() {
+      if (!data) return;
+      const { lat, lng, at } = data.lastLocation;
+      const age = Date.now() - new Date(at).getTime();
+      const st = $('st');
+
+      if (!data.active) {
+        st.className = 'st';
+        $('st-title').textContent = 'SOS ended';
+        $('st-sub').textContent = 'This person ended the alert. Last seen ' + ago(age) + '.';
+      } else if (age < 30000) {
+        st.className = 'st live';
+        $('st-title').textContent = 'Live';
+        $('st-sub').textContent = 'Location is updating in real time.';
+      } else {
+        st.className = 'st lost';
+        $('st-title').textContent = 'No signal';
+        $('st-sub').textContent = 'Last seen ' + ago(age) + ' at the spot shown on the map.';
+      }
+
+      $('d-age').textContent = ago(age);
+      $('d-pts').textContent = data.path.length;
+      $('d-xy').textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+      $('gmaps').href = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+      if (marker) marker.setStyle({ color: '#fff', fillColor: st.className.includes('lost') ? '#E08A00' : '#D62839' });
     }
 
     async function refresh() {
-      const a = await (await fetch('/api/alerts/' + id)).json();
-      const { lat, lng, at } = a.lastLocation;
-      const age = Date.now() - new Date(at).getTime();
+      try {
+        const res = await fetch('/api/alerts/' + id);
+        const a = res.ok ? await res.json() : null;
+        if (!a || !a.lastLocation) throw new Error('missing');
+        data = a;
 
-      if (!marker) marker = L.marker([lat, lng]).addTo(map);
-      marker.setLatLng([lat, lng]);
-      line.setLatLngs(a.path.map(p => [p.lat, p.lng]));
-      if (first) { map.setView([lat, lng], 16); first = false; }
+        const { lat, lng } = a.lastLocation;
+        if (!marker) marker = L.circleMarker([lat, lng], { radius: 11, weight: 3, fillOpacity: 1 }).addTo(map);
+        marker.setLatLng([lat, lng]);
+        line.setLatLngs(a.path.map(p => [p.lat, p.lng]));
+        if (first) { map.setView([lat, lng], 16); first = false; }
 
-      if (!a.active) {
-        banner.style.background = '#555';
-        banner.textContent = `SOS ended. Last seen ${ago(age)}`;
-      } else if (age < 30000) {
-        banner.style.background = '#c62828';
-        banner.textContent = '🔴 LIVE: location updating';
-      } else {
-        banner.style.background = '#e65100';
-        banner.textContent = `⚠️ No signal. Last seen ${ago(age)} at this location`;
+        $('who').textContent = (a.userName || 'Someone') + "'s trip · started " + new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        render();
+      } catch (e) {
+        if (!data) {
+          $('who').textContent = '';
+          $('st-title').textContent = 'Link not valid';
+          $('st-sub').textContent = 'This tracking link is missing or incorrect. Ask for a fresh one.';
+        }
       }
-      marker.bindPopup('Last seen: ' + new Date(at).toLocaleTimeString());
     }
 
-    refresh();
-    setInterval(refresh, 4000);
+    $('center').onclick = () => {
+      if (data) map.setView([data.lastLocation.lat, data.lastLocation.lng], 16);
+    };
+
+    if (!id) {
+      $('who').textContent = '';
+      $('st-title').textContent = 'No alert selected';
+      $('st-sub').textContent = 'Open the full tracking link you were sent.';
+    } else {
+      refresh();
+      setInterval(refresh, 4000);
+      setInterval(render, 1000);
+    }
   </script>
 </body>
 </html>
